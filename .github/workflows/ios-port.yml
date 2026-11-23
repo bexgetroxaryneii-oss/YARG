@@ -19,18 +19,6 @@ jobs:
           submodules: recursive
           lfs: true
 
-      - name: Check the Unity secrets
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        run: |
-          missing=0
-          for name in UNITY_LICENSE UNITY_EMAIL UNITY_PASSWORD; do
-            if [ -z "${!name}" ]; then echo "::error::secret $name is not set"; missing=1; fi
-          done
-          exit $missing
-
       - name: Native libraries (BASS, yarg_audio, STB)
         run: ios-port/build-natives.sh
 
@@ -42,6 +30,18 @@ jobs:
 
       - name: Point the BASS and SQLite bindings at the linked libraries
         run: dotnet run --project ios-port/PatchPInvoke -c Release -- Assets/Packages
+
+      - name: Check the Unity secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          missing=0
+          for name in UNITY_LICENSE UNITY_EMAIL UNITY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::secret $name is not set"; missing=1; fi
+          done
+          exit $missing
 
       - name: Restore the Unity Library cache
         uses: actions/cache@v4
