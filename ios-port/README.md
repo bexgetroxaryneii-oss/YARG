@@ -13,3 +13,5 @@ An unofficial iPhone build of YARG for sideloading. Made by Claude Strife - X.
 
 Not on iOS: video venues (VLC), Discord status, USB lighting.
 Songs: copy them into Files > On My iPhone > YARG Mobile.
+
+Build: Actions > "YARG iOS build" > Run workflow. The IPA is the run's `YARG-Mobile-ipa-runN` artifact.
