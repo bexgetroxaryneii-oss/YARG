@@ -23,6 +23,14 @@ if (args.Length != 1 || !Directory.Exists(args[0]))
     return 2;
 }
 
+// The add-ons reference ManagedBass itself; let Cecil find every restored assembly.
+var resolver = new DefaultAssemblyResolver();
+foreach (var directory in Directory.EnumerateFiles(args[0], "*.dll", SearchOption.AllDirectories)
+             .Select(Path.GetDirectoryName).Distinct())
+{
+    resolver.AddSearchDirectory(directory!);
+}
+
 int patched = 0;
 foreach (var path in Directory.EnumerateFiles(args[0], "*.dll", SearchOption.AllDirectories))
 {
@@ -31,7 +39,7 @@ foreach (var path in Directory.EnumerateFiles(args[0], "*.dll", SearchOption.All
 
     var bytes = File.ReadAllBytes(path);
     using var input = new MemoryStream(bytes);
-    using var module = ModuleDefinition.ReadModule(input, new ReaderParameters { ReadingMode = ReadingMode.Immediate });
+    using var module = ModuleDefinition.ReadModule(input, new ReaderParameters { ReadingMode = ReadingMode.Immediate, AssemblyResolver = resolver });
     int count = 0;
     foreach (var reference in module.ModuleReferences)
     {
