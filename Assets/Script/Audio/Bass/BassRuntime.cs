@@ -22,7 +22,12 @@ namespace YARG.Audio.BASS
         {
             YargLogger.LogInfo("Initializing BASS...");
             string bassPath = GetBassDirectory();
+#if UNITY_IOS && !UNITY_EDITOR
+            // iOS: the add-on is an embedded framework in the app's Frameworks folder.
+            string opusLibDirectory = Path.Combine(bassPath, "bassopus.framework", "bassopus");
+#else
             string opusLibDirectory = Path.Combine(bassPath, "bassopus");
+#endif
 
             int opusHandle = Bass.PluginLoad(opusLibDirectory);
             if (opusHandle == 0)
@@ -150,6 +155,10 @@ namespace YARG.Audio.BASS
 
         private static string GetBassDirectory()
         {
+#if UNITY_IOS && !UNITY_EDITOR
+            // <App>.app/Data is Application.dataPath; frameworks sit beside it.
+            return Path.Combine(Path.GetDirectoryName(Application.dataPath), "Frameworks");
+#else
             string pluginDirectory = Path.Combine(Application.dataPath, "Plugins");
 
 #if !UNITY_EDITOR && UNITY_STANDALONE_WIN
@@ -173,6 +182,7 @@ namespace YARG.Audio.BASS
 #endif
 
             return pluginDirectory;
+#endif
         }
     }
 }

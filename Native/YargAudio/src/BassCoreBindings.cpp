@@ -1,4 +1,7 @@
 #include "BassCoreBindings.h"
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 #include <climits>
 
@@ -7,6 +10,9 @@ namespace {
 
 #if defined(_WIN32)
 constexpr const char* BassModule = "bass.dll";
+#elif defined(__APPLE__) && TARGET_OS_IOS
+// iOS: BASS ships as an embedded dynamic framework.
+constexpr const char* BassModule = "@rpath/bass.framework/bass";
 #elif defined(__APPLE__)
 constexpr const char* BassModule = "libbass.dylib";
 #else

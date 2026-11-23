@@ -55,7 +55,19 @@ if(MSVC)
         "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     target_compile_options(yarg_audio PRIVATE -Wall -Wextra -Wpedantic)
-    if(APPLE)
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # YARG iOS port: an embedded dynamic framework, found through the
+        # app's Frameworks folder like the BASS frameworks it binds to.
+        set_target_properties(yarg_audio PROPERTIES
+            FRAMEWORK TRUE
+            MACOSX_FRAMEWORK_IDENTIFIER com.yarg.yarg-audio
+            MACOSX_FRAMEWORK_BUNDLE_VERSION 1
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING 0.1.0
+            BUILD_WITH_INSTALL_RPATH YES
+            INSTALL_NAME_DIR "@rpath"
+            INSTALL_RPATH "@executable_path/Frameworks;@loader_path/Frameworks"
+        )
+    elseif(APPLE)
         set_target_properties(yarg_audio PROPERTIES
             BUILD_WITH_INSTALL_RPATH YES
             INSTALL_NAME_DIR "@rpath"

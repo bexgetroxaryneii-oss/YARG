@@ -10,7 +10,7 @@ namespace YARG.Audio.BASS.Native
 {
     public static class YargAudioBindings
     {
-#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX || UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX || UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX || UNITY_IOS
         private const int RTLD_NOW = 2;
         private const int RTLD_GLOBAL = 8;
 #endif
@@ -409,6 +409,9 @@ namespace YARG.Audio.BASS.Native
             return Path.Combine(dataPath, "Plugins", "libyarg_audio.so");
 #elif UNITY_STANDALONE_WIN
             return Path.Combine(dataPath, "Plugins", "x86_64", "yarg_audio.dll");
+#elif UNITY_IOS
+            // Embedded in the app bundle's Frameworks folder (YARG iOS port).
+            return "@rpath/yarg_audio.framework/yarg_audio";
 #else
             return "yarg_audio";
 #endif
@@ -423,6 +426,8 @@ namespace YARG.Audio.BASS.Native
             return LinuxNative.dlopen(path, RTLD_NOW | RTLD_GLOBAL);
 #elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
             return MacNative.dlopen(path, RTLD_NOW | RTLD_GLOBAL);
+#elif UNITY_IOS
+            return IosNative.dlopen(path, RTLD_NOW | RTLD_GLOBAL);
 #else
             return IntPtr.Zero;
 #endif
@@ -436,6 +441,8 @@ namespace YARG.Audio.BASS.Native
             return LinuxNative.dlsym(handle, symbol);
 #elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
             return MacNative.dlsym(handle, symbol);
+#elif UNITY_IOS
+            return IosNative.dlsym(handle, symbol);
 #else
             return IntPtr.Zero;
 #endif
@@ -622,6 +629,16 @@ namespace YARG.Audio.BASS.Native
             public static extern IntPtr dlopen(string filename, int flags);
 
             [DllImport("libSystem.dylib")]
+            public static extern IntPtr dlsym(IntPtr handle, string symbol);
+        }
+#elif UNITY_IOS
+        // iOS links libSystem into the app itself, so IL2CPP calls it directly.
+        private static class IosNative
+        {
+            [DllImport("__Internal")]
+            public static extern IntPtr dlopen(string filename, int flags);
+
+            [DllImport("__Internal")]
             public static extern IntPtr dlsym(IntPtr handle, string symbol);
         }
 #endif

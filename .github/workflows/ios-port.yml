@@ -1,0 +1,102 @@
+# YARG iOS port: builds an unsigned IPA for sideloading (SideStore).
+# Needs three repository secrets (Settings > Secrets and variables > Actions):
+# UNITY_LICENSE (contents of the Unity Personal .ulf), UNITY_EMAIL, UNITY_PASSWORD.
+# Made by Claude Strife - X.
+name: YARG iOS build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    name: iPhone IPA
+    runs-on: macos-15
+    timeout-minutes: 300
+    steps:
+      - name: Check out (with YARG.Core)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+
+      - name: Check the Unity secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          missing=0
+          for name in UNITY_LICENSE UNITY_EMAIL UNITY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::secret $name is not set"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Native libraries (BASS, yarg_audio, STB)
+        run: ios-port/build-natives.sh
+
+      - name: Restore NuGet packages
+        run: |
+          dotnet tool install --global NuGetForUnity.Cli
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          nugetforunity restore
+
+      - name: Point the BASS and SQLite bindings at the linked libraries
+        run: dotnet run --project ios-port/PatchPInvoke -c Release -- Assets/Packages
+
+      - name: Restore the Unity Library cache
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: yarg-ios-library-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: yarg-ios-library-
+
+      - name: Export the Xcode project (Unity)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          YARG_IOS_BUILD_NUMBER: ${{ github.run_number }}
+        with:
+          targetPlatform: iOS
+          buildMethod: YARG.Editor.IosPort.IosPortBuild.Build
+          cacheUnityInstallationOnMac: true
+          allowDirtyBuild: true
+
+      - name: Build the unsigned IPA (Xcode)
+        run: |
+          set -euo pipefail
+          project=$(find build/iOS -maxdepth 3 -name 'Unity-iPhone.xcodeproj' | head -1)
+          [ -n "$project" ] || { echo "::error::no Xcode project was exported"; exit 1; }
+          xcodebuild -project "$project" -scheme Unity-iPhone -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/YARG.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            archive | tail -200
+          app=$(find "$RUNNER_TEMP/YARG.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' | head -1)
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$app" "$RUNNER_TEMP/ipa/Payload/"
+          name="YARG-Mobile-run${{ github.run_number }}-unsigned.ipa"
+          (cd "$RUNNER_TEMP/ipa" && zip -qr -y "$GITHUB_WORKSPACE/$name" Payload)
+          echo "IPA=$name" >> "$GITHUB_ENV"
+          {
+            echo "### ✅ $name"
+            echo "Size: $(du -h "$name" | cut -f1). Unsigned: install it with SideStore."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: YARG-Mobile-ipa-run${{ github.run_number }}
+          path: ${{ env.IPA }}
+          retention-days: 30
+
+      - name: Upload the build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: YARG-Mobile-logs-run${{ github.run_number }}
+          path: |
+            build/**/*.log
+            ~/Library/Logs/Unity/*.log
+          if-no-files-found: ignore

@@ -45,6 +45,12 @@ namespace YARG.Editor.YargAudio
 
         public void OnPreprocessBuild(BuildReport report)
         {
+            // The iOS port builds yarg_audio.framework separately (ios-port/build-natives.sh).
+            if (report.summary.platform == BuildTarget.iOS)
+            {
+                return;
+            }
+
             if (!EnsureUpToDate(isExplicit: false))
             {
                 throw new BuildFailedException("[YargAudio Builder] Native audio build failed. See console for details.");

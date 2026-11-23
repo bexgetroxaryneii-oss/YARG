@@ -1,10 +1,16 @@
 #include "BassMixBindings.h"
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 namespace yarg::audio {
 namespace {
 
 #if defined(_WIN32)
 constexpr const char* BassMixModule = "bassmix.dll";
+#elif defined(__APPLE__) && TARGET_OS_IOS
+// iOS: BASS ships as an embedded dynamic framework.
+constexpr const char* BassMixModule = "@rpath/bassmix.framework/bassmix";
 #elif defined(__APPLE__)
 constexpr const char* BassMixModule = "libbassmix.dylib";
 #else
