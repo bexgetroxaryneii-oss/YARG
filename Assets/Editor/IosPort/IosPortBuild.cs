@@ -48,7 +48,6 @@ namespace YARG.Editor.IosPort
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
-            PlayerSettings.iOS.renderExtraFrameOnPause = false;
 
             string version = Environment.GetEnvironmentVariable("YARG_IOS_BUILD_NUMBER");
             if (!string.IsNullOrEmpty(version))
