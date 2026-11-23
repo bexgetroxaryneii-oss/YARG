@@ -5,6 +5,10 @@
 // (BASS) and libsqlite3 that the Xcode project links.
 // Usage: PatchPInvoke <directory with restored NuGet packages>
 // Made by Claude Strife - X.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Mono.Cecil;
 
 var libraries = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
