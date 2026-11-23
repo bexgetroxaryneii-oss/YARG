@@ -31,6 +31,17 @@ namespace YARG.Editor.IosPort
             PlayerSettings.iOS.deferSystemGesturesMode = UnityEngine.iOS.SystemGestureDeferMode.All;
             PlayerSettings.productName = "YARG Mobile";
 
+            // Same text-formatting support the desktop builds compile with.
+            string defines = PlayerSettings.GetScriptingDefineSymbols(target);
+            foreach (string define in new[] { "ENABLE_JSON_CATALOG", "ZSTRING_TEXTMESHPRO_SUPPORT" })
+            {
+                if (!defines.Split(';').Contains(define))
+                {
+                    defines = string.IsNullOrEmpty(defines) ? define : defines + ";" + define;
+                }
+            }
+            PlayerSettings.SetScriptingDefineSymbols(target, defines);
+
             // A rhythm game is played sideways; never leave a pixel of the screen unused.
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToPortrait = false;

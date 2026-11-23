@@ -9,6 +9,10 @@ using System.Linq;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
+#if !UNITY_STANDALONE_WIN && !UNITY_STANDALONE_OSX && !UNITY_STANDALONE_LINUX
+using YARG.Menu.Persistent;
+#endif
+
 namespace YARG.Helpers
 {
     public static class FileExplorerHelper
