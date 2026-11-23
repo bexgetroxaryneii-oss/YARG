@@ -6,6 +6,12 @@ name: YARG iOS build
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ios-port]
+
+concurrency:
+  group: yarg-ios-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   ios:
