@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
+#if !UNITY_IOS || UNITY_EDITOR
 using UnityEngine.InputSystem.Switch;
+#endif
 using UnityEngine.InputSystem.Utilities;
 using YARG.Core;
 using YARG.Core.Audio;
@@ -708,13 +710,13 @@ namespace YARG.Input
                 switch ((family, mode))
                 {
                     case (ControllerFamily.Gamepad, GameMode.Menu):
-                        if (controller is SwitchProControllerHID)
+                        if (IsSwitchPro(controller))
                         {
                             return ReusableBindingSetDefaults.DefaultSwitchGamepadMenu;
                         }
                         break;
                     case (ControllerFamily.Gamepad, GameMode.Vocals):
-                        if (controller is SwitchProControllerHID)
+                        if (IsSwitchPro(controller))
                         {
                             return ReusableBindingSetDefaults.DefaultSwitchGamepadVocalGameplay;
                         }
@@ -880,5 +882,15 @@ namespace YARG.Input
             }
         }
 #nullable disable
+
+        // The Switch Pro layout is not compiled into iOS builds (YARG iOS port).
+        private static bool IsSwitchPro(InputDevice controller)
+        {
+#if !UNITY_IOS || UNITY_EDITOR
+            return controller is SwitchProControllerHID;
+#else
+            return false;
+#endif
+        }
     }
 }
