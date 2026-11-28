@@ -35,6 +35,27 @@ jobs:
             8.0.x
             9.0.x
 
+      - name: Turn off the MIDI backend (no RtMidi on iOS)
+        # Minis' backend hooks the per-frame input update before it loads RtMidi, so on iOS the
+        # failed load left an update that threw (and logged a stack trace) every frame. An
+        # embedded copy of the package, at the locked commit, skips creating the backend.
+        run: |
+          hash=$(python3 -c "import json;print(json.load(open('Packages/packages-lock.json'))['dependencies']['jp.keijiro.minis']['hash'])")
+          git init -q /tmp/minis
+          git -C /tmp/minis fetch -q --depth 1 https://github.com/TheNathannator/Minis.git "$hash"
+          git -C /tmp/minis checkout -q FETCH_HEAD
+          cp -R /tmp/minis/Packages/jp.keijiro.minis Packages/jp.keijiro.minis
+          init=Packages/jp.keijiro.minis/Runtime/Initialization.cs
+          python3 - "$init" <<'PY'
+          import sys
+          path = sys.argv[1]
+          text = open(path).read()
+          old = "_backend = new MidiBackend();"
+          assert text.count(old) == 1, "Minis Initialization.cs changed; update this step"
+          open(path, "w").write(text.replace(old, "#if !UNITY_IOS\n                " + old + "\n#endif"))
+          PY
+          grep -n -B1 -A1 "new MidiBackend" "$init"
+
       - name: Restore NuGet packages
         run: |
           dotnet tool install --global NuGetForUnity.Cli

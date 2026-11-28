@@ -35,6 +35,17 @@ namespace YARG.Audio.BASS
             _sampleHandle = sampleHandle;
             _name = name;
             _playbackEnded = playbackEnded;
+            _callbackId = BassCallbackTargets.Register(this);
+        }
+
+        // Static (looked up through the user pointer) because IL2CPP cannot hand instance methods to native code.
+        private static readonly SyncProcedure VOICE_FREED_SYNC = OnVoiceFreedSync;
+        private readonly IntPtr _callbackId;
+
+        [AOT.MonoPInvokeCallback(typeof(SyncProcedure))]
+        private static void OnVoiceFreedSync(int handle, int channel, int data, IntPtr user)
+        {
+            BassCallbackTargets.Get<BassSamplePlayer>(user)?.OnVoiceFreed(handle, channel, data, user);
         }
 
         public bool IsPlaying
@@ -99,6 +110,8 @@ namespace YARG.Audio.BASS
                 _voices.Clear();
                 _fadingVoices.Clear();
             }
+
+            BassCallbackTargets.Unregister(_callbackId);
         }
 
         public bool Play(bool loop = false, int fadeInMilliseconds = 0)
@@ -122,7 +135,7 @@ namespace YARG.Audio.BASS
                     return false;
                 }
 
-                if (Bass.ChannelSetSync(voice, SyncFlags.Free, 0, OnVoiceFreed) == 0)
+                if (Bass.ChannelSetSync(voice, SyncFlags.Free, 0, VOICE_FREED_SYNC, _callbackId) == 0)
                 {
                     var error = Bass.LastError;
                     Bass.StreamFree(voice);

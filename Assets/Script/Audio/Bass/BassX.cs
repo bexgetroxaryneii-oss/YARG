@@ -19,7 +19,14 @@ namespace YARG.Audio.BASS
             // Last flag is BASS_SAMPLE_NOREORDER, which is not yet included in BassFlags.
             // https://www.un4seen.com/forum/?topic=20148.msg140872#msg140872
             const BassFlags FLAGS = BassFlags.Prescan | BassFlags.Decode | BassFlags.AsyncFile | (BassFlags) 64;
-            return Bass.CreateStream(StreamSystem.NoBuffer, FLAGS, new BassStreamProcedures(stream));
+            var procedures = new BassStreamProcedures(stream);
+            int handle = Bass.CreateStream(StreamSystem.NoBuffer, FLAGS, procedures, procedures.UserData);
+            if (handle == 0)
+            {
+                procedures.Release();
+            }
+
+            return handle;
         }
 
         public static bool SetProcessingThreads(int mixer, int count) =>

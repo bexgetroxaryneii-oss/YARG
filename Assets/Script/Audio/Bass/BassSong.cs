@@ -38,6 +38,7 @@ namespace YARG.Audio.BASS
         private bool           _seekPending;
         private double         _seekPosition;
         private int            _songEndHandle;
+        private IntPtr         _callbackId;
         private float          _songSpeed = 1f;
         private float          _speed     = 1f;
         private double         _outputLatency;
@@ -91,16 +92,25 @@ namespace YARG.Audio.BASS
                 return;
             }
 
-            void sync(int _, int __, int ___, IntPtr _____)
+            if (_callbackId == IntPtr.Zero)
             {
-                var end = _songEnd;
-                if (end != null)
-                {
-                    UnityMainThreadCallback.QueueEvent(end.Invoke);
-                }
+                _callbackId = BassCallbackTargets.Register(this);
             }
 
-            _songEndHandle = BassMix.ChannelSetSync(_longestHandle, SyncFlags.End, 0, sync);
+            _songEndHandle = BassMix.ChannelSetSync(_longestHandle, SyncFlags.End, 0, SONG_END_SYNC, _callbackId);
+        }
+
+        // Static (looked up through the user pointer) because IL2CPP cannot hand closures to native code.
+        private static readonly SyncProcedure SONG_END_SYNC = OnSongEndSync;
+
+        [AOT.MonoPInvokeCallback(typeof(SyncProcedure))]
+        private static void OnSongEndSync(int handle, int channel, int data, IntPtr user)
+        {
+            var end = BassCallbackTargets.Get<BassSong>(user)?._songEnd;
+            if (end != null)
+            {
+                UnityMainThreadCallback.QueueEvent(end.Invoke);
+            }
         }
 
         internal bool TryAttachOutput(BassOutput output)
@@ -563,6 +573,8 @@ namespace YARG.Audio.BASS
 
             _toneChannels.Clear();
             _stemPipeline.Dispose();
+            BassCallbackTargets.Unregister(_callbackId);
+            _callbackId = IntPtr.Zero;
         }
 
 
