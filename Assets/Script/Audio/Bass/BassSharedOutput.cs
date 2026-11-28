@@ -59,8 +59,8 @@ namespace YARG.Audio.BASS
             int fallback = -1;
             for (int deviceIndex = 1; Bass.GetDeviceInfo(deviceIndex, out var info); deviceIndex++)
             {
-                YargLogger.LogFormatInfo("BASS iOS device {0}: '{1}' enabled={2} default={3}",
-                    deviceIndex, info.Name, info.IsEnabled, info.IsDefault);
+                YargLogger.LogInfo(
+                    $"BASS iOS device {deviceIndex}: '{info.Name}' enabled={info.IsEnabled} default={info.IsDefault}");
                 if (!info.IsEnabled || info.IsLoopback)
                 {
                     continue;
@@ -74,7 +74,7 @@ namespace YARG.Audio.BASS
 
             if (fallback > 0)
             {
-                YargLogger.LogFormatInfo("Using BASS device {0} for output '{1}'", fallback, name);
+                YargLogger.LogInfo($"Using BASS device {fallback} for output '{name}'");
                 var device = BassOutputDevice.Create(fallback, name);
                 return device == null ? null : new BassSharedOutput(name, device, router);
             }
