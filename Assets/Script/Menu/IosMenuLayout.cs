@@ -33,6 +33,7 @@ namespace YARG.Menu
             public Vector2 ReferenceResolution;
             public float ScaleFactor;
             public readonly List<(RectTransform Rect, Vector2 Min, Vector2 Max)> Fitted = new();
+            public readonly HashSet<RectTransform> Known = new();
             public Rect AppliedSafeArea;
             public float AppliedScale;
         }
@@ -111,7 +112,19 @@ namespace YARG.Menu
             var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var canvas in canvases)
             {
-                if (_canvases.ContainsKey(canvas) || !IsMenuCanvas(canvas))
+                if (_canvases.TryGetValue(canvas, out var known))
+                {
+                    // Menus and popups can be added to a canvas after it was first seen.
+                    int before = known.Fitted.Count;
+                    CollectFitted((RectTransform) canvas.transform, known, 0);
+                    if (known.Fitted.Count != before)
+                    {
+                        Apply(known, Screen.safeArea);
+                    }
+                    continue;
+                }
+
+                if (!IsMenuCanvas(canvas))
                 {
                     continue;
                 }
@@ -180,14 +193,20 @@ namespace YARG.Menu
                         continue;
                     }
 
-                    if (!hasGraphic && depth < MAX_CONTAINER_DEPTH && rect.GetComponent<ScrollRect>() == null)
+                    // A layout group places its children itself (it would undo their anchors), so
+                    // such a container is padded as a whole instead of looked through.
+                    if (!hasGraphic && depth < MAX_CONTAINER_DEPTH && rect.GetComponent<ScrollRect>() == null &&
+                        rect.GetComponent<LayoutGroup>() == null)
                     {
                         CollectFitted(rect, state, depth + 1);
                         continue;
                     }
                 }
 
-                state.Fitted.Add((rect, rect.anchorMin, rect.anchorMax));
+                if (state.Known.Add(rect))
+                {
+                    state.Fitted.Add((rect, rect.anchorMin, rect.anchorMax));
+                }
             }
         }
 

@@ -23,7 +23,7 @@ the phone detects, and the list opens on a type that is actually connected.
 
 Playing without a controller: on-screen pads (`Assets/Script/Input/Touch/TouchGuitarOverlay.cs`)
 appear during gameplay as a virtual gamepad — five frets bottom-left, strum up/down
-bottom-right, star power above the strum, pause at the top. "PADS" (left edge) shows or
+bottom-right, star power above the strum, pause at the top. "PADS" (low on the left edge) shows or
 hides them anywhere. Make a five-fret guitar profile once, bind it to the on-screen
 gamepad ("Default Gamepad as 5F Guitar" works as-is), then tap a pad to connect it.
 Controllers: Bluetooth gamepads iOS recognises (Xbox, PlayStation, Switch Pro, MFi) work,

@@ -18,8 +18,8 @@ namespace YARG.Input.Touch
     /// <para>
     /// The pads show during gameplay and hide in the menus (which take taps directly).
     /// They are hidden rather than disabled: disabling the last on-screen control removes
-    /// the virtual gamepad, which would disconnect its player. The small "PADS" button in
-    /// the top-left corner shows or hides them by hand.
+    /// the virtual gamepad, which would disconnect its player. The small "PADS" button low on
+    /// the left edge shows or hides them by hand.
     /// </para>
     /// </summary>
     public sealed class TouchGuitarOverlay : MonoBehaviour
@@ -97,13 +97,14 @@ namespace YARG.Input.Touch
             _pads = root.gameObject.AddComponent<CanvasGroup>();
 
             // Frets: a row along the bottom-left, held with the left hand.
-            const float fretSize = 150f, fretGap = 18f, margin = 30f;
+            // "bottom" hugs the lower screen edge; "margin" keeps the pads off the side edges.
+            const float fretSize = 150f, fretGap = 18f, margin = 30f, bottom = 8f;
             for (int i = 0; i < FRETS.Length; i++)
             {
                 var pad = NewPad($"Fret {i + 1}", root, FRETS[i].Path, FRETS[i].Color);
                 Anchor(pad, new Vector2(0f, 0f));
                 pad.sizeDelta = new Vector2(fretSize, fretSize * 1.6f);
-                pad.anchoredPosition = new Vector2(margin + i * (fretSize + fretGap), margin);
+                pad.anchoredPosition = new Vector2(margin + i * (fretSize + fretGap), bottom);
             }
 
             // Strum bar: two halves on the bottom-right, tapped with the right hand.
@@ -111,18 +112,18 @@ namespace YARG.Input.Touch
             var up = NewPad("Strum Up", root, "<Gamepad>/dpad/up", strumColor);
             Anchor(up, new Vector2(1f, 0f));
             up.sizeDelta = new Vector2(420f, 180f);
-            up.anchoredPosition = new Vector2(-margin - 420f, margin + 180f + 12f);
+            up.anchoredPosition = new Vector2(-margin - 420f, bottom + 180f + 12f);
 
             var down = NewPad("Strum Down", root, "<Gamepad>/dpad/down", strumColor);
             Anchor(down, new Vector2(1f, 0f));
             down.sizeDelta = new Vector2(420f, 180f);
-            down.anchoredPosition = new Vector2(-margin - 420f, margin);
+            down.anchoredPosition = new Vector2(-margin - 420f, bottom);
 
             // Star power above the strum bar; pause at the top centre.
             var star = NewPad("Star Power", root, "<Gamepad>/select", new Color(0.55f, 0.85f, 1f));
             Anchor(star, new Vector2(1f, 0f));
             star.sizeDelta = new Vector2(200f, 120f);
-            star.anchoredPosition = new Vector2(-margin - 200f, margin + 2 * 180f + 40f);
+            star.anchoredPosition = new Vector2(-margin - 200f, bottom + 2 * 180f + 40f);
             AddLabel(star, "STAR");
 
             var pause = NewPad("Pause", root, "<Gamepad>/start", new Color(1f, 1f, 1f));
@@ -137,7 +138,8 @@ namespace YARG.Input.Touch
             // In the strip left of the safe area (menus are padded clear of it), so it never
             // covers a menu title or button.
             var toggle = NewRect("Pads Toggle", transform);
-            toggle.anchorMin = toggle.anchorMax = new Vector2(0f, 0.5f);
+            // Low on the left edge, above the rounded corner.
+            toggle.anchorMin = toggle.anchorMax = new Vector2(0f, 0.22f);
             toggle.pivot = new Vector2(0f, 0.5f);
             toggle.sizeDelta = new Vector2(110f, 90f);
             toggle.anchoredPosition = new Vector2(8f, 0f);
@@ -220,7 +222,9 @@ namespace YARG.Input.Touch
                 return;
             }
 
-            _safeArea.anchorMin = new Vector2(_lastSafeArea.xMin / Screen.width, _lastSafeArea.yMin / Screen.height);
+            // The bottom inset (home indicator) is ignored so the pads sit at the very bottom:
+            // taps there are fine, only an upward swipe from the edge leaves the app.
+            _safeArea.anchorMin = new Vector2(_lastSafeArea.xMin / Screen.width, 0f);
             _safeArea.anchorMax = new Vector2(_lastSafeArea.xMax / Screen.width, _lastSafeArea.yMax / Screen.height);
         }
 
