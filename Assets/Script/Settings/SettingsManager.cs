@@ -180,6 +180,9 @@ namespace YARG.Settings
             new MetadataTab("Graphics", icon: "Display", new TrackPreviewBuilder())
             {
                 new HeaderMetadata("Display"),
+#if UNITY_IOS
+                nameof(Settings.MenuSize),
+#endif
                 nameof(Settings.VSync),
                 nameof(Settings.FpsCap),
                 nameof(Settings.VenueFpsCap),
@@ -340,6 +343,43 @@ namespace YARG.Settings
 
         private static bool IsAsioVisible() => IsWindows() && Settings?.OutputMode.Value == AudioOutputMode.Asio;
 
+#if UNITY_IOS && !UNITY_EDITOR
+        /// <summary>
+        /// YARG iOS port: songs live in Files > On My iPhone > YARG Mobile > Songs (the app's
+        /// Documents folder is shared with the Files app). Make sure that folder exists and is a
+        /// song folder. Re-sideloading moves the app's container, so a "…/Documents/Songs"
+        /// entry from an earlier install is replaced rather than left pointing nowhere.
+        /// </summary>
+        private static void AddIosSongsFolder()
+        {
+            try
+            {
+                string songs = PathHelper.SanitizePath(Path.Combine(PathHelper.RealPersistentDataPath, "Songs"));
+                Directory.CreateDirectory(songs);
+
+                string readme = Path.Combine(songs, "Put your songs here.txt");
+                if (!File.Exists(readme))
+                {
+                    File.WriteAllText(readme,
+                        "Copy song folders (or .sng files) into this Songs folder, then in YARG open\n" +
+                        "Settings > Song Manager and press Scan Songs.\n");
+                }
+
+                var folders = Settings.SongFolders;
+                folders.RemoveAll(f => !string.IsNullOrEmpty(f) && f != songs &&
+                    f.Replace('\\', '/').TrimEnd('/').EndsWith("/Documents/Songs"));
+                if (!folders.Contains(songs))
+                {
+                    folders.Insert(0, songs);
+                }
+            }
+            catch (Exception e)
+            {
+                YargLogger.LogException(e, "Failed to set up the iOS Songs folder!");
+            }
+        }
+#endif
+
         public static void LoadSettings()
         {
             _settingsCanBeSaved = true;
@@ -364,6 +404,10 @@ namespace YARG.Settings
 
             // If null, recreate
             Settings ??= new SettingContainer();
+
+#if UNITY_IOS && !UNITY_EDITOR
+            AddIosSongsFolder();
+#endif
 
             AudioOutputMode outputMode = GlobalAudioHandler.GetOutputMode(Settings.OutputDevice.Value);
             Settings.OutputMode.SetValueWithoutNotify(outputMode);

@@ -134,10 +134,13 @@ namespace YARG.Input.Touch
 
         private void BuildToggle()
         {
-            var toggle = NewRect("Pads Toggle", _safeArea);
-            Anchor(toggle, new Vector2(0f, 1f));
-            toggle.sizeDelta = new Vector2(150f, 70f);
-            toggle.anchoredPosition = new Vector2(20f, -90f);
+            // In the strip left of the safe area (menus are padded clear of it), so it never
+            // covers a menu title or button.
+            var toggle = NewRect("Pads Toggle", transform);
+            toggle.anchorMin = toggle.anchorMax = new Vector2(0f, 0.5f);
+            toggle.pivot = new Vector2(0f, 0.5f);
+            toggle.sizeDelta = new Vector2(110f, 90f);
+            toggle.anchoredPosition = new Vector2(8f, 0f);
 
             var image = toggle.gameObject.AddComponent<Image>();
             image.color = new Color(0f, 0f, 0f, 0.45f);

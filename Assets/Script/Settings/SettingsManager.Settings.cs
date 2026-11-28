@@ -281,6 +281,10 @@ namespace YARG.Settings
 
             public SliderSetting ShowCursorTimer      { get; } = new(2f, 0f, 5f);
 
+            // YARG iOS port: menu text and touch-target size, as a percentage.
+            public SliderSetting MenuSize { get; } = new(110f, 100f, 140f,
+                value => YARG.Menu.IosMenuLayout.SetScale(value / 100f), wholeNumbers: true);
+
             public ToggleSetting PauseOnDeviceDisconnect { get; } = new(true);
             public ToggleSetting PauseOnFocusLoss { get; } = new(true);
             public ToggleSetting PauseOnMenuOpen { get; } = new(true);

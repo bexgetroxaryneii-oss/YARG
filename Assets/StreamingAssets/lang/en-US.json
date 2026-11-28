@@ -2276,6 +2276,10 @@
                 "Name": "Show Advanced Music Library Options",
                 "Description": "Adds advanced settings to the \"More Options\" menu in the Music Library such as \"View Song Folder\" and \"Copy Song Checksum\"."
             },
+            "MenuSize": {
+                "Name": "Menu Size",
+                "Description": "Makes menu text and buttons bigger for easier touching (percent of normal size)."
+            },
             "ShowCursorTimer": {
                 "Name": "Cursor Show Time",
                 "Description": "How long the cursor will be shown for before hiding. Set to \"0\" for no hiding (playmode)."

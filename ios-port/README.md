@@ -12,11 +12,18 @@ An unofficial iPhone build of YARG for sideloading. Made by Claude Strife - X.
   turns on the Files-app song folder.
 
 Not on iOS: VLC video playback (Unity's VideoPlayer is used instead), Discord status, USB lighting.
-Songs: copy them into Files > On My iPhone > YARG Mobile.
+Songs: the app makes Files > On My iPhone > YARG Mobile > Songs and adds it as a song
+folder automatically. Copy song folders or .sng files there (from iCloud Drive, a USB
+drive, AirDrop...), then Settings > Song Manager > Scan Songs.
+
+Menus are padded clear of the Dynamic Island and rounded corners (the game itself still
+fills the screen). Settings > Graphics > Menu Size (100-140%, default 110%) makes menu
+text and buttons bigger. In Profiles > Bindings, each controller type lists the devices
+the phone detects, and the list opens on a type that is actually connected.
 
 Playing without a controller: on-screen pads (`Assets/Script/Input/Touch/TouchGuitarOverlay.cs`)
 appear during gameplay as a virtual gamepad — five frets bottom-left, strum up/down
-bottom-right, star power above the strum, pause at the top. "PADS" (top-left) shows or
+bottom-right, star power above the strum, pause at the top. "PADS" (left edge) shows or
 hides them anywhere. Make a five-fret guitar profile once, bind it to the on-screen
 gamepad ("Default Gamepad as 5F Guitar" works as-is), then tap a pad to connect it.
 Controllers: Bluetooth gamepads iOS recognises (Xbox, PlayStation, Switch Pro, MFi) work,

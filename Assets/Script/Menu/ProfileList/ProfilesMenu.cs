@@ -90,6 +90,9 @@ namespace YARG.Menu.ProfileList
 
             RefreshProfileList();
 
+#if UNITY_IOS
+            PreferDetectedControllerFamily();
+#endif
             _controls = LayoutHelper.GetAllControlsForControllerFamily(CurrentBindingSetFilter);
 
             _ = Navigator.Instance.PushScheme(new NavigationScheme(new()
@@ -569,6 +572,49 @@ namespace YARG.Menu.ProfileList
                     throw new ArgumentOutOfRangeException($"Unexpected tabId {tabId}");
             };
         }
+
+#if UNITY_IOS
+        /// <summary>
+        /// YARG iOS port: open the bindings on a controller type the phone actually has.
+        /// Guitars reach iOS as gamepads (CRKD over Bluetooth) or keyboards (Santroller in
+        /// keyboard mode), never as "5-fret guitar controllers", so the desktop default would
+        /// show nothing connected. The on-screen pads are skipped; they are a fallback.
+        /// </summary>
+        private void PreferDetectedControllerFamily()
+        {
+            bool IsReal(InputDevice d) => d.native && d.enabled && d is not Pointer;
+            if (InputSystem.devices.Any(d => IsReal(d) &&
+                LayoutHelper.LayoutStringToControllerFamily(d.layout) == CurrentBindingSetFilter))
+            {
+                return;
+            }
+
+            ControllerFamily? keyboard = null;
+            foreach (var device in InputSystem.devices)
+            {
+                if (!IsReal(device))
+                {
+                    continue;
+                }
+
+                var family = LayoutHelper.LayoutStringToControllerFamily(device.layout);
+
+                if (device is Keyboard)
+                {
+                    keyboard ??= family;
+                    continue;
+                }
+
+                CurrentBindingSetFilter = family;
+                return;
+            }
+
+            if (keyboard is { } keyboardFamily)
+            {
+                CurrentBindingSetFilter = keyboardFamily;
+            }
+        }
+#endif
 
         public void SetCurrentBindingSetFilter(ControllerFamily family)
         {
