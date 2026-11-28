@@ -18,6 +18,17 @@ namespace YARG.Editor.IosPort
         private const string FRAMEWORKS_SOURCE = "ios-port/Frameworks";
         private const string FRAMEWORKS_IN_PROJECT = "Frameworks/IosPort";
 
+        // The iOS BASS framework has no DirectSound/EAX; these report failure like BASS does
+        // when a feature is unavailable. YARG never calls them on iOS.
+        private const string BASS_WINDOWS_STUBS =
+@"#include <stddef.h>
+void *BASS_GetDSoundObject(unsigned int object) { (void) object; return NULL; }
+int BASS_GetEAXParameters(unsigned int *env, float *vol, float *decay, float *damp)
+{ (void) env; (void) vol; (void) decay; (void) damp; return 0; }
+int BASS_SetEAXParameters(int env, float vol, float decay, float damp)
+{ (void) env; (void) vol; (void) decay; (void) damp; return 0; }
+";
+
         [PostProcessBuild(1000)]
         public static void OnPostprocessBuild(BuildTarget target, string buildPath)
         {
@@ -68,6 +79,13 @@ namespace YARG.Editor.IosPort
             }
             project.AddBuildProperty(mainTarget, "LD_RUNPATH_SEARCH_PATHS", "@executable_path/Frameworks");
             project.AddFrameworkToProject(frameworkTarget, "libsqlite3.tbd", false);
+
+            // Windows-only BASS entry points ManagedBass declares: IL2CPP links every P/Invoke
+            // directly, so UnityFramework needs a definition even though nothing calls them.
+            const string stubs = "Classes/IosPort/BassWindowsStubs.c";
+            Directory.CreateDirectory(Path.Combine(buildPath, "Classes/IosPort"));
+            File.WriteAllText(Path.Combine(buildPath, stubs), BASS_WINDOWS_STUBS);
+            project.AddFileToBuild(frameworkTarget, project.AddFile(stubs, stubs, PBXSourceTree.Source));
 
             project.WriteToFile(projectPath);
         }
