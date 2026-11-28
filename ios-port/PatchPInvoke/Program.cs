@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 var libraries = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
@@ -32,6 +33,7 @@ foreach (var directory in Directory.EnumerateFiles(args[0], "*.dll", SearchOptio
 }
 
 int patched = 0;
+int totalCallbacks = 0;
 foreach (var path in Directory.EnumerateFiles(args[0], "*.dll", SearchOption.AllDirectories))
 {
     if (!assemblies.Contains(Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
@@ -50,11 +52,84 @@ foreach (var path in Directory.EnumerateFiles(args[0], "*.dll", SearchOption.All
             count++;
         }
     }
-    if (count == 0)
+    // IL2CPP only hands a managed method to native code as a callback if it is static and
+    // carries an attribute named MonoPInvokeCallback. ManagedBass registers its own callbacks
+    // (ChannelReferences.Callback, a BASS_SYNC_FREE sync set inside CreateStream/ChannelSetSync)
+    // without one, so every song failed to load on iOS. Tag each static method the library
+    // turns into a delegate.
+    int callbacks = Path.GetFileName(path).StartsWith("ManagedBass", StringComparison.OrdinalIgnoreCase)
+        ? MarkCallbacks(module) : 0;
+    totalCallbacks += callbacks;
+    if (count == 0 && callbacks == 0)
         continue;
     module.Write(path);
     patched++;
 }
 
 Console.WriteLine($"patched {patched} assemblies");
-return patched >= 3 ? 0 : 1;
+return patched >= 3 && totalCallbacks > 0 ? 0 : 1;
+
+static int MarkCallbacks(ModuleDefinition module)
+{
+    var targets = new Dictionary<MethodDefinition, TypeReference>();
+    foreach (var type in module.GetTypes())
+    foreach (var method in type.Methods.Where(m => m.HasBody))
+    {
+        var instructions = method.Body.Instructions;
+        for (int i = 0; i + 1 < instructions.Count; i++)
+        {
+            if (instructions[i].OpCode != OpCodes.Ldftn
+                || instructions[i].Operand is not MethodReference reference
+                || instructions[i + 1].OpCode != OpCodes.Newobj
+                || instructions[i + 1].Operand is not MethodReference constructor)
+                continue;
+            var target = reference.Resolve();
+            if (target == null || !target.IsStatic || target.Module != module)
+                continue;
+            var delegateType = constructor.DeclaringType.Resolve();
+            if (delegateType?.BaseType?.FullName != "System.MulticastDelegate")
+                continue;
+            targets[target] = constructor.DeclaringType;
+        }
+    }
+    if (targets.Count == 0)
+        return 0;
+
+    var attributeCtor = DefineCallbackAttribute(module);
+    var typeType = new TypeReference("System", "Type", module, module.TypeSystem.CoreLibrary);
+    foreach (var (method, delegateType) in targets)
+    {
+        if (method.CustomAttributes.Any(a => a.AttributeType.Name == "MonoPInvokeCallbackAttribute"))
+            continue;
+        var attribute = new CustomAttribute(attributeCtor);
+        attribute.ConstructorArguments.Add(new CustomAttributeArgument(typeType, delegateType));
+        method.CustomAttributes.Add(attribute);
+        Console.WriteLine($"{module.Name}: [MonoPInvokeCallback] {method.DeclaringType.FullName}.{method.Name}");
+    }
+    return targets.Count;
+}
+
+// IL2CPP matches the attribute by name, so the library gets its own copy (it cannot reference UnityEngine).
+static MethodReference DefineCallbackAttribute(ModuleDefinition module)
+{
+    var existing = module.GetType("AOT", "MonoPInvokeCallbackAttribute");
+    if (existing != null)
+        return existing.Methods.First(m => m.IsConstructor && !m.IsStatic);
+
+    var corlib = module.TypeSystem.CoreLibrary;
+    var attributeBase = new TypeReference("System", "Attribute", module, corlib);
+    var typeType = new TypeReference("System", "Type", module, corlib);
+    var type = new TypeDefinition("AOT", "MonoPInvokeCallbackAttribute",
+        TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit, attributeBase);
+    var ctor = new MethodDefinition(".ctor",
+        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+        module.TypeSystem.Void);
+    ctor.Parameters.Add(new ParameterDefinition("type", ParameterAttributes.None, typeType));
+    var il = ctor.Body.GetILProcessor();
+    il.Emit(OpCodes.Ldarg_0);
+    il.Emit(OpCodes.Call, new MethodReference(".ctor", module.TypeSystem.Void, attributeBase) { HasThis = true });
+    il.Emit(OpCodes.Ret);
+    type.Methods.Add(ctor);
+    module.Types.Add(type);
+    return ctor;
+}
