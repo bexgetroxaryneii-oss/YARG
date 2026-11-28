@@ -301,6 +301,7 @@ namespace YARG.Menu.MusicLibrary
         public void PrimaryTextClick()
         {
             if (!Showing) return;
+            if (SelectFirstOnTouch()) return;
 
             ViewType.PrimaryButtonClick();
         }
@@ -308,8 +309,29 @@ namespace YARG.Menu.MusicLibrary
         public void SecondaryTextClick()
         {
             if (!Showing) return;
+            if (SelectFirstOnTouch()) return;
 
             ViewType.SecondaryTextClick();
+        }
+
+        /// <summary>
+        /// iOS port: on a touch screen there is no hover, so the first tap on a row selects it
+        /// (showing its details and preview) and a tap on the selected row opens it.
+        /// Returns true if this tap only selected the row.
+        /// </summary>
+        private bool SelectFirstOnTouch()
+        {
+#if UNITY_IOS
+            if (IsSelected)
+            {
+                return false;
+            }
+
+            var list = GetComponentInParent<ListMenu<ViewType, SongView>>();
+            return list != null && list.SelectViewObject(this);
+#else
+            return false;
+#endif
         }
 
         public void FavoriteClick()

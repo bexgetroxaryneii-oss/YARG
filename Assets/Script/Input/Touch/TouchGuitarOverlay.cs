@@ -18,8 +18,8 @@ namespace YARG.Input.Touch
     /// <para>
     /// The pads show during gameplay and hide in the menus (which take taps directly).
     /// They are hidden rather than disabled: disabling the last on-screen control removes
-    /// the virtual gamepad, which would disconnect its player. The small "PADS" button low on
-    /// the left edge shows or hides them by hand.
+    /// the virtual gamepad, which would disconnect its player. The "PADS" pill at the top
+    /// centre shows or hides them by hand.
     /// </para>
     /// </summary>
     public sealed class TouchGuitarOverlay : MonoBehaviour
@@ -126,26 +126,35 @@ namespace YARG.Input.Touch
             star.anchoredPosition = new Vector2(-margin - 200f, bottom + 2 * 180f + 40f);
             AddLabel(star, "STAR");
 
+            // Pause sits just right of the PADS pill at the top centre.
             var pause = NewPad("Pause", root, "<Gamepad>/start", new Color(1f, 1f, 1f));
             Anchor(pause, new Vector2(0.5f, 1f));
             pause.sizeDelta = new Vector2(160f, 80f);
-            pause.anchoredPosition = new Vector2(-80f, -margin - 80f);
+            pause.anchoredPosition = new Vector2(TOGGLE_WIDTH / 2f + 24f, -TOGGLE_TOP - 80f);
             AddLabel(pause, "II");
         }
 
+        private const float TOGGLE_WIDTH = 230f, TOGGLE_HEIGHT = 76f, TOGGLE_TOP = 14f;
+
         private void BuildToggle()
         {
-            // In the strip left of the safe area (menus are padded clear of it), so it never
-            // covers a menu title or button.
+            // A pill at the top centre: in landscape the Dynamic Island and the rounded
+            // corners are on the sides, so nothing covers it there.
             var toggle = NewRect("Pads Toggle", transform);
-            // Low on the left edge, above the rounded corner.
-            toggle.anchorMin = toggle.anchorMax = new Vector2(0f, 0.22f);
-            toggle.pivot = new Vector2(0f, 0.5f);
-            toggle.sizeDelta = new Vector2(110f, 90f);
-            toggle.anchoredPosition = new Vector2(8f, 0f);
+            toggle.anchorMin = toggle.anchorMax = new Vector2(0.5f, 1f);
+            toggle.pivot = new Vector2(0.5f, 1f);
+            toggle.sizeDelta = new Vector2(TOGGLE_WIDTH, TOGGLE_HEIGHT);
+            toggle.anchoredPosition = new Vector2(0f, -TOGGLE_TOP);
 
-            var image = toggle.gameObject.AddComponent<Image>();
-            image.color = new Color(0f, 0f, 0f, 0.45f);
+            // Cyan outline, with the dark fill inset inside it.
+            YARG.Menu.IosTouchStyle.AddRoundedImage(toggle.gameObject, YARG.Menu.IosTouchStyle.OutlineColor);
+            var fill = NewRect("Fill", toggle);
+            Stretch(fill);
+            fill.offsetMin = new Vector2(4f, 4f);
+            fill.offsetMax = new Vector2(-4f, -4f);
+            YARG.Menu.IosTouchStyle.AddRoundedImage(fill.gameObject, new Color(0.03f, 0.07f, 0.13f, 0.92f))
+                .raycastTarget = false;
+
             var button = toggle.gameObject.AddComponent<Button>();
             button.onClick.AddListener(() =>
             {

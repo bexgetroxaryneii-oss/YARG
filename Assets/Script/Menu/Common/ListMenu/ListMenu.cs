@@ -10,6 +10,9 @@ using YARG.Settings;
 namespace YARG.Menu.ListMenu
 {
     public abstract class ListMenu<TViewType, TViewObject> : MonoBehaviour, IScrollHandler
+#if UNITY_IOS
+        , IBeginDragHandler, IDragHandler, IEndDragHandler
+#endif
         where TViewType : BaseViewType
         where TViewObject : ViewObject<TViewType>
     {
@@ -131,6 +134,9 @@ namespace YARG.Menu.ListMenu
         protected virtual void OnDisable()
         {
             CancelRealignBeforeRender();
+#if UNITY_IOS
+            StopFlick();
+#endif
         }
 
         protected virtual void OnSelectedIndexChanged()
@@ -459,6 +465,131 @@ namespace YARG.Menu.ListMenu
                 }
             }
         }
+
+        /// <summary>
+        /// Selects the row shown by <paramref name="viewObject"/> (used for tap-to-select on touch screens).
+        /// Returns false if that object is not showing a row.
+        /// </summary>
+        public bool SelectViewObject(TViewObject viewObject)
+        {
+            int objectIndex = _viewObjects.IndexOf(viewObject);
+            if (objectIndex < 0 || _viewList == null)
+            {
+                return false;
+            }
+
+            int realIndex = SelectedIndex + objectIndex - _effectiveListViewPadding;
+            if (realIndex < 0 || realIndex >= _viewList.Count || !_viewList[realIndex].IsSelectable)
+            {
+                return false;
+            }
+
+            if (realIndex != SelectedIndex)
+            {
+                SelectedIndex = realIndex;
+            }
+            return true;
+        }
+
+#if UNITY_IOS
+        // iOS port: drag the list with a finger, and flick it to keep it moving. The list is
+        // centred on its selection, so moving the selection one row per row-height dragged
+        // scrolls it under the finger.
+        private const float FLICK_MIN_ROWS_PER_SECOND = 4f;
+        private const float FLICK_MAX_ROWS_PER_SECOND = 60f;
+        private const float FLICK_DECAY = 3.5f;
+
+        private float _dragRows;
+        private float _dragVelocity;
+        private Coroutine _flick;
+
+        private float DragRowHeightPixels
+        {
+            get
+            {
+                var canvas = GetComponentInParent<Canvas>();
+                float scale = canvas != null ? canvas.rootCanvas.scaleFactor : 1f;
+                return Mathf.Max(1f, _viewObjectHeight * scale);
+            }
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            StopFlick();
+            _dragRows = 0f;
+            _dragVelocity = 0f;
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!CanScroll || _viewList == null || _viewList.Count == 0)
+            {
+                return;
+            }
+
+            // Finger up = later rows.
+            float rows = eventData.delta.y / DragRowHeightPixels;
+            float dt = Mathf.Max(Time.unscaledDeltaTime, 1f / 240f);
+            _dragVelocity = Mathf.Lerp(_dragVelocity, rows / dt, 0.4f);
+            StepRows(rows);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (Mathf.Abs(_dragVelocity) >= FLICK_MIN_ROWS_PER_SECOND && isActiveAndEnabled)
+            {
+                _flick = StartCoroutine(Flick(Mathf.Clamp(_dragVelocity,
+                    -FLICK_MAX_ROWS_PER_SECOND, FLICK_MAX_ROWS_PER_SECOND)));
+            }
+        }
+
+        private System.Collections.IEnumerator Flick(float velocity)
+        {
+            while (Mathf.Abs(velocity) >= FLICK_MIN_ROWS_PER_SECOND * 0.5f)
+            {
+                yield return null;
+                float dt = Time.unscaledDeltaTime;
+                if (!StepRows(velocity * dt))
+                {
+                    break;
+                }
+                velocity *= Mathf.Exp(-FLICK_DECAY * dt);
+            }
+
+            _flick = null;
+        }
+
+        private void StopFlick()
+        {
+            if (_flick != null)
+            {
+                StopCoroutine(_flick);
+                _flick = null;
+            }
+        }
+
+        /// <summary>Moves the selection by whole rows; false once an end of the list is reached.</summary>
+        private bool StepRows(float rows)
+        {
+            _dragRows += rows;
+            int steps = (int) _dragRows;
+            if (steps == 0)
+            {
+                return true;
+            }
+            _dragRows -= steps;
+
+            int target = Mathf.Clamp(SelectedIndex + steps, 0, _viewList.Count - 1);
+            if (target == SelectedIndex)
+            {
+                _dragRows = 0f;
+                return false;
+            }
+
+            SelectedIndex = target;
+            return true;
+        }
+#endif
 
         public void OnScroll(PointerEventData eventData)
         {

@@ -39,11 +39,15 @@ namespace YARG.Menu.ListMenu
 
         protected bool Showing { get; private set; }
 
+        /// <summary>Whether this object is showing the list's selected row.</summary>
+        public bool IsSelected { get; private set; }
+
         protected TViewType ViewType;
 
         public virtual void Show(bool selected, TViewType viewType)
         {
             Showing = true;
+            IsSelected = selected;
             ViewType = viewType;
 
             // Set background
@@ -72,6 +76,7 @@ namespace YARG.Menu.ListMenu
                 SetMarqueeActive(false);
 
             Showing = false;
+            IsSelected = false;
             _canvasGroup.alpha = 0f;
             _canvasGroup.blocksRaycasts = false;
         }

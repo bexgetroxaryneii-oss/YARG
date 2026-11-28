@@ -16,6 +16,7 @@ namespace YARG.Menu
         private void Start()
         {
             _versionText.text = GlobalVariables.Instance.CurrentVersion;
+            YARG.Menu.IosTouchStyle.DecorateMenuEntries(transform);
         }
 
         private void OnEnable()
