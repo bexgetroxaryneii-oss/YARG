@@ -52,6 +52,34 @@ namespace YARG.Audio.BASS
                 return device == null ? null : new BassSharedOutput(name, device, router);
             }
 
+#if UNITY_IOS && !UNITY_EDITOR
+            // iOS port: BASS has no "Default" alias device on iOS (that is a desktop-only
+            // config), so the saved "Default" output never matches a device name. Use the
+            // system's default route instead (speaker, headphones, Bluetooth, AirPlay).
+            int fallback = -1;
+            for (int deviceIndex = 1; Bass.GetDeviceInfo(deviceIndex, out var info); deviceIndex++)
+            {
+                YargLogger.LogFormatInfo("BASS iOS device {0}: '{1}' enabled={2} default={3}",
+                    deviceIndex, info.Name, info.IsEnabled, info.IsDefault);
+                if (!info.IsEnabled || info.IsLoopback)
+                {
+                    continue;
+                }
+
+                if (fallback < 0 || info.IsDefault)
+                {
+                    fallback = deviceIndex;
+                }
+            }
+
+            if (fallback > 0)
+            {
+                YargLogger.LogFormatInfo("Using BASS device {0} for output '{1}'", fallback, name);
+                var device = BassOutputDevice.Create(fallback, name);
+                return device == null ? null : new BassSharedOutput(name, device, router);
+            }
+#endif
+
             return null;
         }
 

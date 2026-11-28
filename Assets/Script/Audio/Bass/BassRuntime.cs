@@ -37,6 +37,19 @@ namespace YARG.Audio.BASS
 
             Bass.Configure(Configuration.IncludeDefaultDevice, true);
 
+#if UNITY_IOS && !UNITY_EDITOR
+            // iOS port: Unity's own audio is disabled, so BASS owns the audio session.
+            // "Playback" category (plays with the silent switch on), mixes with other apps,
+            // and allows AirPlay and Bluetooth A2DP routes.
+            const int BASS_CONFIG_IOS_SESSION = 34;
+            const int BASS_IOS_SESSION_MIX = 1, BASS_IOS_SESSION_AIRPLAY = 0x40, BASS_IOS_SESSION_BTA2DP = 0x100;
+            if (!Bass.Configure((Configuration) BASS_CONFIG_IOS_SESSION,
+                BASS_IOS_SESSION_MIX | BASS_IOS_SESSION_AIRPLAY | BASS_IOS_SESSION_BTA2DP))
+            {
+                YargLogger.LogFormatError("Failed to configure the iOS audio session: {0}", Bass.LastError);
+            }
+#endif
+
             Bass.UpdatePeriod = 5;
             Bass.DeviceNonStop = true;
             Bass.AsyncFileBufferLength = 65536;
