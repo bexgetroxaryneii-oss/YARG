@@ -56,12 +56,7 @@ namespace YARG.Editor.IosPort
             }
 
             // Shown next to the version in the menus, so the installed build is easy to identify.
-            string sha = Environment.GetEnvironmentVariable("GITHUB_SHA");
             string stamp = string.IsNullOrEmpty(version) ? "local" : version;
-            if (!string.IsNullOrEmpty(sha) && sha.Length >= 7)
-            {
-                stamp += " (" + sha.Substring(0, 7) + ")";
-            }
             System.IO.Directory.CreateDirectory("Assets/StreamingAssets");
             System.IO.File.WriteAllText("Assets/StreamingAssets/ios-build.txt", stamp);
             AssetDatabase.Refresh();

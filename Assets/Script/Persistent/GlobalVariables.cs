@@ -60,7 +60,7 @@ namespace YARG
                 string stampPath = System.IO.Path.Combine(Application.streamingAssetsPath, "ios-build.txt");
                 if (System.IO.File.Exists(stampPath))
                 {
-                    CurrentVersion += " - iOS build " + System.IO.File.ReadAllText(stampPath).Trim();
+                    CurrentVersion += " - iOS Build " + System.IO.File.ReadAllText(stampPath).Trim() + " - Claude Strife";
                 }
             }
             catch (System.Exception)
