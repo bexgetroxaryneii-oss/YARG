@@ -161,3 +161,4 @@ __pycache__/
 /ios-port/PatchPInvoke/obj/
 /Assets/Plugins/iOS/
 /Assets/Plugins/iOS.meta
+Assets/StreamingAssets/ios-build.txt*

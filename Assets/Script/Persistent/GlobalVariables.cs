@@ -53,6 +53,21 @@ namespace YARG
         protected override void SingletonAwake()
         {
             CurrentVersion = LoadVersion();
+#if UNITY_IOS && !UNITY_EDITOR
+            // iOS port: the CI build number, written by IosPortBuild.
+            try
+            {
+                string stampPath = System.IO.Path.Combine(Application.streamingAssetsPath, "ios-build.txt");
+                if (System.IO.File.Exists(stampPath))
+                {
+                    CurrentVersion += " - iOS build " + System.IO.File.ReadAllText(stampPath).Trim();
+                }
+            }
+            catch (System.Exception)
+            {
+                // A missing stamp only hides the build number.
+            }
+#endif
             YargLogger.LogFormatInfo("YARG {0}", CurrentVersion);
 
             // Command line arguments

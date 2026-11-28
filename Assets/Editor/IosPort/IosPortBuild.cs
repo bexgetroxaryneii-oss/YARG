@@ -55,6 +55,17 @@ namespace YARG.Editor.IosPort
                 PlayerSettings.iOS.buildNumber = version;
             }
 
+            // Shown next to the version in the menus, so the installed build is easy to identify.
+            string sha = Environment.GetEnvironmentVariable("GITHUB_SHA");
+            string stamp = string.IsNullOrEmpty(version) ? "local" : version;
+            if (!string.IsNullOrEmpty(sha) && sha.Length >= 7)
+            {
+                stamp += " (" + sha.Substring(0, 7) + ")";
+            }
+            System.IO.Directory.CreateDirectory("Assets/StreamingAssets");
+            System.IO.File.WriteAllText("Assets/StreamingAssets/ios-build.txt", stamp);
+            AssetDatabase.Refresh();
+
             ExcludeDesktopNativePlugins();
 
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
