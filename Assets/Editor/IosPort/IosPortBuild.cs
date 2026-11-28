@@ -55,6 +55,8 @@ namespace YARG.Editor.IosPort
                 PlayerSettings.iOS.buildNumber = version;
             }
 
+            ExcludeDesktopNativePlugins();
+
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             var options = new BuildPlayerOptions
             {
@@ -72,6 +74,44 @@ namespace YARG.Editor.IosPort
             {
                 EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 1);
             }
+        }
+
+        /// <summary>
+        /// Many desktop native plugins (Linux .so, macOS .dylib/.bundle, Windows .dll/.lib) are
+        /// imported with "Any Platform" on and nothing excluding iOS, so Unity copies them into
+        /// the Xcode project and Xcode tries to link the .dylibs (-lVLCUnityPlugin and so on).
+        /// Turn iOS off for every native plugin that does not live in an "iOS" folder.
+        /// Managed assemblies are left alone; IL2CPP needs them.
+        /// </summary>
+        private static void ExcludeDesktopNativePlugins()
+        {
+            int changed = 0;
+            foreach (var importer in PluginImporter.GetAllImporters())
+            {
+                string path = importer.assetPath;
+                if (!importer.isNativePlugin || !path.StartsWith("Assets/") ||
+                    path.Split('/').Any(part => part.Equals("iOS", StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                bool any = importer.GetCompatibleWithAnyPlatform();
+                if (any ? importer.GetExcludeFromAnyPlatform(BuildTarget.iOS)
+                        : !importer.GetCompatibleWithPlatform(BuildTarget.iOS))
+                {
+                    continue;
+                }
+
+                if (any)
+                {
+                    importer.SetExcludeFromAnyPlatform(BuildTarget.iOS, true);
+                }
+                importer.SetCompatibleWithPlatform(BuildTarget.iOS, false);
+                importer.SaveAndReimport();
+                changed++;
+                Debug.Log($"[iOS port] Excluded desktop plugin from iOS: {path}");
+            }
+            Debug.Log($"[iOS port] Excluded {changed} desktop native plugins from iOS");
         }
     }
 }

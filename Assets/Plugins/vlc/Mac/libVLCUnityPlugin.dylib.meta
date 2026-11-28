@@ -18,6 +18,7 @@ PluginImporter:
     Any:
       enabled: 1
       settings:
+        Exclude iOS: 1
         Exclude Editor: 1
         Exclude Linux64: 1
         Exclude OSXUniversal: 0
